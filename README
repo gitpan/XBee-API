@@ -1,0 +1,131 @@
+NAME
+    XBee::API - Object-oriented Perl interface to Digi XBee module API mode.
+
+EXAMPLE
+    A basic example:
+
+     use XBee::API;
+     use Data::Dumper;
+     my $api = XBee::API->new( { device => '/dev/ttyU0' } ) || die $!;
+     die "Failed to transmit" unless $api->tx(
+        { dest_h => 0, dest_l => 0 },
+        'hello world!'
+     );
+     my $rx = $api->rx();
+     die Dumper($rx);
+
+SYNOPSIS
+    XBee::API is a module designed to encapsulate the Digi XBee API in
+    object- oriented Perl. This module expects to communicate with an XBee
+    module using the API firmware via a serial (or serial over USB) device.
+
+    This module is currently a work in progress and thus the API may change
+    in the future.
+
+LICENSE
+    This module is licensed under the same terms as Perl itself.
+
+CONSTANTS
+    A single set of constants, ':xbee_flags', can be imported. These
+    constants all represent various XBee flags, such as packet types and
+    broadcast addresses. See the XBee datasheet for details. The following
+    constants are available:
+
+     XBEE_API_TYPE__MODEM_STATUS
+     XBEE_API_TYPE__AT_COMMAND
+     XBEE_API_TYPE__AT_COMMAND_QUEUE_PARAMETER_VALUE
+     XBEE_API_TYPE__AT_COMMAND_RESPONSE
+     XBEE_API_TYPE__REMOTE_COMMAND_REQUEST
+     XBEE_API_TYPE__REMOTE_COMMAND_RESPONSE
+     XBEE_API_TYPE__ZIGBEE_TRANSMIT_REQUEST
+     XBEE_API_TYPE__EXPLICIT_ADDRESSING_ZIGBEE_COMMAND_FRAME
+     XBEE_API_TYPE__ZIGBEE_TRANSMIT_STATUS
+     XBEE_API_TYPE__ZIGBEE_RECEIVE_PACKET
+     XBEE_API_TYPE__ZIGBEE_EXPLICIT_RX_INDICATOR
+     XBEE_API_TYPE__ZIGBEE_IO_DATA_SAMPLE_RX_INDICATOR
+     XBEE_API_TYPE__XBEE_SENSOR_READ_INDICATOR_
+     XBEE_API_TYPE__NODE_IDENTIFICATION_INDICATOR
+ 
+     XBEE_API_BROADCAST_ADDR_H
+     XBEE_API_BROADCAST_ADDR_L
+     XBEE_API_BROADCAST_NA_UNKNOWN_ADDR
+ 
+     XBEE_API_TYPE_TO_STRING
+
+    The above should be self explanatory (with the help of the datasheet).
+    The constant "XBEE_API_TYPE_TO_STRING" is a hashref keyed by the numeric
+    id of the packet type with the value being the constant name, to aid in
+    debugging.
+
+METHODS
+  new
+    Object constructor. Accepts a single parameter, a hashref of options.
+    The following options are recognized:
+
+   device
+    Required. The device entry to open (to be passed to Device::SerialPort).
+    Example:: /dev/ttyU0
+
+   packet_timeout
+    Optional, defaults to 20. Amount of time (in seconds) to wait for a read
+    to complete. Smaller values cause the module to wait less time for a
+    packet to be received by the XBee module. Setting this value too low
+    will cause timeouts to be reported in situations where the network is
+    "slow".
+
+  at
+    Send an AT command to the module. Accepts two parameters, the first is
+    the AT command name (as two-character string), and the second is the
+    expected data for that command (if any). See the XBee datasheet for a
+    list of supported AT commands and expected data for each.
+
+    Returns the frame ID sent for this packet. To retrieve the reply (if
+    any), call rx().
+
+  tx
+    Sends a transmit request to the XBee. Accepts two parameters, the first
+    is the endpoint address and the second the data to be sent.
+
+    Endpoint addresses should be specified as a hashref containing the
+    following keys:
+
+    dest_h
+        The high 32-bits of the destination address.
+
+    dest_l
+        The low 32-bits of the destination address.
+
+    dest_na
+        The destination network address.
+
+    The meaning of these addresses can be found in the XBee datasheet. Note:
+    In the future, a XBee::API::Node object will be an acceptable parameter.
+
+    Return values depend on calling context. In scalar context, true or
+    false will be returned representing transmission acknowledgement by the
+    remote XBee device. In array context, the first return value is the
+    delivery status (as set in the transmit status packet and documented in
+    the datasheet), and the second is the actual transmit status packet (as
+    a hashref) itself.
+
+    No retransmissions will be attempted by this module, but the XBee device
+    itself will likely attempt retransmissions as per its configuration (and
+    subject to whether or not the packet was a "broadcast").
+
+  rx
+    Accepts no parameters. Receives a packet from the XBee module. This
+    packet may be a transmission from a remote XBee node or a control packet
+    from the local XBee module.
+
+    If no packet is received before the timeout period expires, undef is
+    returned.
+
+    Returned packets will be as a hashref of the packet data, broken out by
+    key for easy access. Note, as this module is a work in progress, not
+    every XBee packet type is supported. Callers should check the "api_type"
+    key to determine the type of the received packet.
+
+CHANGES
+  0.2, 20101206 - jeagle
+    Initial release to CPAN.
+
